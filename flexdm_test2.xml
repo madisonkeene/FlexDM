@@ -1,0 +1,13 @@
+<!DOCTYPE flexdm SYSTEM "flexdm.dtd">
+
+<flexdm>
+    <dataset name="weather.arff" test="leavexval" results="matrix,stats">
+        <classifier name="weka.classifiers.trees.J48">
+			<parameter name="-M" value="[1,2]"/>
+            <parameter name="-C" value="[0.1:0.1:0.5]"/>
+        </classifier>
+		<classifier name="weka.classifiers.rules.PART">
+			<parameter name="-C" value="0.5"/>
+		</classifier>
+    </dataset>
+</flexdm>

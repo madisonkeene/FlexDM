@@ -1,0 +1,10 @@
+<!ELEMENT flexdm (dataset+)>
+<!ELEMENT dataset (classifier+)>
+<!ELEMENT classifier (parameter*)>
+<!ELEMENT parameter EMPTY>
+<!ATTLIST dataset name CDATA #REQUIRED>
+<!ATTLIST dataset results CDATA #REQUIRED>
+<!ATTLIST classifier name CDATA #REQUIRED>
+<!ATTLIST parameter name CDATA #REQUIRED>
+<!ATTLIST parameter value CDATA #IMPLIED>
+<!ATTLIST dataset test CDATA #REQUIRED>
