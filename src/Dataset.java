@@ -1,3 +1,5 @@
+import weka.core.converters.ConverterUtils;
+
 import java.util.LinkedList;
 
 /* Class for storing all info about a dataset
@@ -27,9 +29,12 @@ public class Dataset {
 	private LinkedList<Classifier> classList; //Classifiers to be run on this dataset
 	private String test; //Test method
 	private String[] results; //Results requested
+	private String result_string;
 	private String dir; //Directory name
-	
-	//Constructors
+	private ConverterUtils.DataSource source = null;
+    private ConverterUtils.DataSource testFile = null;
+
+    //Constructors
 	
 	public Dataset() {
 		name = null;
@@ -43,6 +48,7 @@ public class Dataset {
 		classList = new LinkedList<Classifier>();
 		results.replaceAll("\\s+","");
 		this.setResults(results.split(","));
+        this.result_string = results;
 	}
 	
 	public Dataset(String name, LinkedList<Classifier> classList) {
@@ -90,7 +96,6 @@ public class Dataset {
 	}
 
 	public String getDir() {
-		// TODO Auto-generated method stub
 		return dir;
 	}
 
@@ -101,6 +106,43 @@ public class Dataset {
 	public void setResults(String[] results) {
 		this.results = results;
 	}
-	
-	
+
+    public ConverterUtils.DataSource getSource() {
+        return source;
+    }
+
+    public void openDataFile() {
+		try {
+			source = new ConverterUtils.DataSource(name);
+		}
+		catch(Exception e) {
+            System.err.println("Dataset " + name + " cannot be found.");
+            System.exit(1);
+		}
+
+    }
+
+    public ConverterUtils.DataSource getTestFile() {
+        return testFile;
+    }
+
+    public void openTestFile() {
+        String[] tempTest = test.split("\\s");
+        if(tempTest[0].equals("testset")) {
+            try {
+                testFile = new ConverterUtils.DataSource(test.substring(7).trim());
+            } catch (Exception e) {
+                System.err.println("Dataset " + test.substring(7).trim() + " cannot be found.");
+                System.exit(1);
+            }
+        }
+    }
+
+    public String getResult_string() {
+        return result_string;
+    }
+
+    public void setResult_string(String result_string) {
+        this.result_string = result_string;
+    }
 }

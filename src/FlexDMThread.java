@@ -36,22 +36,26 @@ public class FlexDMThread extends Thread{
 	private Semaphore s; //To control threads executing
 	private int cNum; //Classifier number, for output
 	private File summary; //Summary file to write to
+    private File log;
 	
 	//Constructor
-	public FlexDMThread(Dataset dtemp, Classifier ctemp, Semaphore s, int cNum, File file) {
+	public FlexDMThread(Dataset dtemp, Classifier ctemp, Semaphore s, int cNum, File file, File log) {
 		dataset = dtemp;
 		classifier = ctemp;
 		this.s = s;
 		this.cNum = cNum;
 		this.summary = file;
+        this.log = log;
 	}
 
 	//Run the thread
 	public void run () {
 		try{
 			//Get the data from the source
-			DataSource source = new DataSource(dataset.getName());
-			Instances data = source.getDataSet();
+
+            FlexDM.getMainData.acquire();
+			Instances data = dataset.getSource().getDataSet();
+            FlexDM.getMainData.release();
 			
 			//Set class attribute if undefined
 			if (data.classIndex() == -1) {
@@ -108,8 +112,11 @@ public class FlexDMThread extends Thread{
 				x.buildClassifier(data);
 				
 				//Open test file, load data
-				DataSource testFile = new DataSource(dataset.getTest().substring(7).trim());
-				Instances testSet = testFile.getDataSet();
+				//DataSource testFile = new DataSource(dataset.getTest().substring(7).trim());
+				// Instances testSet = testFile.getDataSet();
+                FlexDM.getTestData.acquire();
+				Instances testSet = dataset.getTestFile().getDataSet();
+                FlexDM.getTestData.release();
 				
 				//Set class attribute if undefined
 				if (testSet.classIndex() == -1) {
@@ -170,7 +177,6 @@ public class FlexDMThread extends Thread{
 			
 			//Add evaluation string to file
 			writer.println(eval.toSummaryString());
-			
 			//Process result options
 			if(checkResults("stats")) { //Classifier statistics
 				writer.println(eval.toClassDetailsString());
@@ -244,7 +250,26 @@ public class FlexDMThread extends Thread{
 					System.out.println("FINISHED CLASSIFIER " + cNum + " - " + classifier.getName() + " on dataset " + dataset.getName() + " with parameters " + temp);
 				}
 			}
-		
+
+			try { //get a permit
+				//grab the summary file, write the classifiers details to it
+				FlexDM.writeLog.acquire();
+				PrintWriter p = new PrintWriter(new FileWriter(log, true));
+				if(temp.equals("results_no_parameters")) { //change output based on parameters
+					temp = temp.substring(8);
+				}
+
+				//write percent correct, classifier name, dataset name to summary file
+				p.write(dataset.getName() + ", " + dataset.getTest() + ", \"" + dataset.getResult_string() + "\", " + classifier.getName() + ", "  + temp + "\n");
+				p.close();
+
+				//release semaphore
+				FlexDM.writeLog.release();
+			}
+			catch (InterruptedException e) { //bad things happened
+				System.err.println("FATAL ERROR OCCURRED: Classifier: " + cNum + " - " + classifier.getName() + " on dataset " + dataset.getName());
+			}
+
 			s.release();
 			
 		}

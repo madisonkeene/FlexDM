@@ -1,7 +1,7 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import java.io.*;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Scanner;
 import java.util.concurrent.Semaphore;
 
 /* Main class for running FlexDM project
@@ -32,9 +32,13 @@ import java.util.concurrent.Semaphore;
 public class FlexDM {
 	//Semaphore for writing to summary file
 	public static Semaphore writeFile = new Semaphore(1);
-
+    public static Semaphore writeLog = new Semaphore(1);
+    public static Semaphore getMainData = new Semaphore(1);
+    public static Semaphore getTestData = new Semaphore(1);
+    public static final String LOG_NAME = "log.txt";
 
 	public static void main(String args[]) {
+		int numcores = Runtime.getRuntime().availableProcessors() - 1;
 		//Check that weka.jar is linked to project properly
 		try {
 			Class.forName("weka.core.Instances");
@@ -56,8 +60,12 @@ public class FlexDM {
 		LinkedList<Dataset> myData = null;
 		
 		//Get name of XML file and parse the file
-		if(args.length != 0) {
+		if(args.length == 1) {
 			myData = p.parseDocument(args[0]);
+		}
+		else if(args.length == 2) {
+			myData = p.parseDocument(args[0]);
+			numcores = Integer.parseInt(args[1]);
 		}
 		else { //XML file not specified
 			System.err.println("The XML file has not been specified.");
@@ -72,57 +80,77 @@ public class FlexDM {
 		//Process the ranges in the parameter elements
 		RangeProcessor x = new RangeProcessor();
 		x.processRanges(myData);
-		
+
+        //check if log file exists
+        File logFile = new File(LOG_NAME);
+        LogFile logFile_obj = null;
+        boolean fileExists = logFile.exists();
+        boolean cont = false;
+        if(fileExists) {
+            //if exists, load, process, open in append mode
+            logFile_obj = new LogFile();
+            logFile_obj.processFile(logFile);
+
+            Scanner in = new Scanner(System.in);
+            System.out.println("Previous experiment found: XML file: " + logFile_obj.getXmlFileName() + " Results folder: " + logFile_obj.getResultsFolder());
+            System.out.println("Would you like to continue previous experiment? (enter y to continue, any key otherwise): ");
+            String s = in.nextLine();
+            if (s.trim().equalsIgnoreCase("y")) {
+                cont = true;
+            }
+            else {
+                logFile_obj = null;
+            }
+        }
+        if(!fileExists || !cont){
+            //if doesnt exist, create new file & open & write info
+            PrintWriter pw;
+            try {
+                pw = new PrintWriter(logFile);
+                pw.write(args[0] + "\n");
+                pw.close();
+            } catch (FileNotFoundException e1) {
+                System.err.println("FATAL ERROR OCCURRED: Could not create log file");
+                System.exit(1);
+            }
+        }
+
 		//Run the experiments
-		runExperiments(myData);
+		runExperiments(myData, numcores, logFile, logFile_obj);
 	}
 
 	/* Method to train/evaluate each classifier on data
 	 * Inputs: a linked list of dataset objects
 	 * Outputs: none
 	 */
-	private static void runExperiments(LinkedList<Dataset> dlist) {
+	private static void runExperiments(LinkedList<Dataset> dlist, int numcores, File logFile, LogFile logFile_obj) {
 		int countNum = 1;
 		
 		//Semaphore to control number of active experiments
-		Semaphore s = new Semaphore(Math.max(1, Runtime.getRuntime().availableProcessors()-1));
+		Semaphore s = new Semaphore(Math.min(numcores, Runtime.getRuntime().availableProcessors() - 1));
+        String parentDir;
+        File summaryFile;
+        if(logFile_obj == null) {
+            parentDir = createResultsDir();
+            summaryFile = createSummaryFile(parentDir);
+            try {
+                PrintWriter p = new PrintWriter(new FileWriter(logFile, true));
+                p.write(parentDir + "\n");
+                p.close();
+            } catch (IOException e) {
+                System.err.println("FATAL ERROR OCCURRED: Could not write to log file");
+                System.exit(1);
+            }
+        }
+        else {
+            parentDir = logFile_obj.getResultsFolder();
+            summaryFile = new File(parentDir + "/results_summary.txt");
+        }
 
-		//Set up parent results directory
-		String parentDir = "Results";
-		File theDir = new File(parentDir);
-		
-		//If the directory doesnt exist, create it
-		if(!theDir.exists()) { 
-			theDir.mkdir();
-		}
-		else { //Directory already exists- create new one with number.
-			int temp = 1;
-			parentDir = "Results" + "(" + temp + ")";
-			theDir = new File(parentDir);
-			
-			//Keep trying to create directory with new number until successful
-			while(theDir.exists()) { 
-				temp++;
-				parentDir = "Results" + "(" + temp + ")";
-				theDir = new File(parentDir);
-			}
+        File resultsDir;
 
-			theDir.mkdir();
-		}
 
-		//create summary file (CSV)
-		File file = new File(parentDir + "/results_summary.txt");
-		PrintWriter p;
-		try {
-			p = new PrintWriter(file);
-			p.write("dataset, classifier, parameters, accuracy(% correct)\r\n");
-			p.close();
-		} catch (FileNotFoundException e1) {
-			System.err.println("FATAL ERROR OCCURRED: Could not create summary file");
-			System.exit(1);
-		}
-
-		//For each dataset
+        //For each dataset
 		for(int i = 0; i < dlist.size(); i++) {	
 			//Get the dataset, get the classifiers to run on that data
 			Dataset dtemp = dlist.get(i);
@@ -140,45 +168,19 @@ public class FlexDM {
 			
 			//Dataset exists
 			if(fileExists) {
-				//Create new results directory for this dataset & test combo
-				try { 
-					theDir = new File(parentDir + "/Results--" + dtemp.getName().substring(dtemp.getName().lastIndexOf("\\") + 1) + "--" + testOpt);
-				}
-				catch (Exception e){
-					theDir = new File(parentDir + "/Results--" + dtemp.getName() + "--" + testOpt);
-				}
-				
-				//if directory doesnt already exist, create it
-				if(!theDir.exists()) {
-					theDir.mkdir();
-				}
-				else { //directory already exists
-					//keep trying to create numbered directory until successful
-					int temp = 1;
-					try {
-						theDir = new File(parentDir + "/Results--" + dtemp.getName().substring(dtemp.getName().lastIndexOf("\\") + 1) + "--" + testOpt + "(" + temp + ")");
-					}
-					catch (Exception e){
-						theDir = new File(parentDir + "/Results--" + dtemp.getName() + "--" + testOpt + "(" + temp + ")");
-					}
-					while(theDir.exists()) {
-						temp++;
-						try {
-							theDir = new File(parentDir + "/Results--" + dtemp.getName().substring(dtemp.getName().lastIndexOf("\\") + 1) + "--" + testOpt + "(" + temp + ")");
-						}
-						catch (Exception e){
-							theDir = new File(parentDir + "/Results--" + dtemp.getName() + "--" + testOpt + "(" + temp + ")");
-						}
-					}
+                //open data files
+                dtemp.openDataFile();
+                dtemp.openTestFile();
 
-					theDir.mkdir();
-				}
+                //create results folder for dataset and test options
+                resultsDir = createDatasetResultsFolder(parentDir, dtemp, testOpt);
 
-				//set directory of the dataset
-				dtemp.setDir(theDir.getAbsolutePath());
+                //set directory of the dataset
+				dtemp.setDir(resultsDir.getAbsolutePath());
 
+                //TODO: REFACTOR THIS CODE!
 				//output that the experiment is starting
-				String dataname[] = {theDir.getName().substring(0,theDir.getName().lastIndexOf("--")), theDir.getName().substring(theDir.getName().lastIndexOf("--")+2)};
+				String dataname[] = {resultsDir.getName().substring(0,resultsDir.getName().lastIndexOf("--")), resultsDir.getName().substring(resultsDir.getName().lastIndexOf("--")+2)};
 				if(dataname.length == 3) {
 					int len = ("STARTING EXPERIMENT ON DATASET " + dataname[0].substring(9).trim() + " WITH TEST " + dataname[1].trim() + " " + dataname[2].trim() +" USING " + s.availablePermits() + " CPU CORES").length();
 					String headFoot = ""; //create line of ----- for pretty output
@@ -225,15 +227,21 @@ public class FlexDM {
 
 					//get classifier, create thread, directory and run
 					Classifier ctemp = clist.get(j);
-					FlexDMThread mythread = new FlexDMThread(dtemp, ctemp, s, countNum, file);
+                    //check things here
+                    if(logFile_obj == null || !classifierDone(logFile_obj.getEntries(), dtemp, ctemp)) {
+                        FlexDMThread mythread = new FlexDMThread(dtemp, ctemp, s, countNum, summaryFile, logFile);
 
-					File newDir = new File(dtemp.getDir() + "/" + ctemp.getName());
-					ctemp.setDirName(newDir.getName());
-					if(!newDir.exists()) {
-						newDir.mkdir();
-					}
-					countNum++;
-					mythread.start();
+                        File newDir = new File(dtemp.getDir() + "/" + ctemp.getName());
+                        ctemp.setDirName(newDir.getName());
+                        if(!newDir.exists()) {
+                            newDir.mkdir();
+                        }
+                        countNum++;
+                        mythread.start();
+                    }
+                    else {
+                        s.release();
+                    }
 				}
 			}
 			else {
@@ -243,7 +251,7 @@ public class FlexDM {
 		}
 
 		//while experiments are running, just wait.
-		while(s.availablePermits() != Math.max(1, Runtime.getRuntime().availableProcessors()-1)) {}
+		while(s.availablePermits() != Math.min(numcores, Runtime.getRuntime().availableProcessors() - 1)) {}
 		try {
 			Thread.sleep(100);
 		} catch (InterruptedException e) {
@@ -254,6 +262,133 @@ public class FlexDM {
 		System.out.println("\n-------------------");
 		System.out.println("FINISHED EXPERIMENT");
 		System.out.println("-------------------");
+
+        deleteFile(LOG_NAME);
 	}
+
+    private static boolean classifierDone(ArrayList<LogEntry> entries, Dataset dataset, Classifier classifier) {
+        //Process hyperparameters for classifier
+        String param_string = "";
+        for (int i = 0; i < classifier.getNumParams(); i++) {
+            param_string += classifier.getParameter(i).getName();
+            param_string+= " ";
+            if(classifier.getParameter(i).getValue() != null) {
+                param_string += classifier.getParameter(i).getValue();
+                param_string+= " ";
+            }
+        }
+        if(param_string.equals("")) { //no parameters
+            param_string = "no_parameters";
+        }
+
+        for(int i = 0; i < entries.size(); i++) {
+            LogEntry ent = entries.get(i);
+            if(dataset.getName().equals(ent.getDataset())){
+                if(dataset.getTest().equals(ent.getTestopt())) {
+                    if(dataset.getResult_string().equals(ent.getResultopt())) {
+                        if(classifier.getName().equals(ent.getClassifier())) {
+                            if(param_string.trim().equals(ent.getParameters().trim())) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Deletes an individual file if it exists
+     * @param filename The name of the file to delete
+     */
+    private static void deleteFile(String filename) {
+        //check file exists
+        File file = new File(filename);
+        boolean exists = file.exists();
+
+        //delete file
+        if(exists) {
+            file.delete();
+        }
+    }
+
+    private static File createDatasetResultsFolder(String parentDir, Dataset dtemp, String testOpt) {
+        File theDir;//Create new results directory for this dataset & test combo
+        try {
+            theDir = new File(parentDir + "/Results--" + dtemp.getName().substring(dtemp.getName().lastIndexOf("\\") + 1) + "--" + testOpt);
+        }
+        catch (Exception e){
+            theDir = new File(parentDir + "/Results--" + dtemp.getName() + "--" + testOpt);
+        }
+
+        //if directory doesnt already exist, create it
+        if(!theDir.exists()) {
+            theDir.mkdir();
+        }
+//        else { //directory already exists
+//            //keep trying to create numbered directory until successful
+//            int temp = 1;
+//            try {
+//                theDir = new File(parentDir + "/Results--" + dtemp.getName().substring(dtemp.getName().lastIndexOf("\\") + 1) + "--" + testOpt + "(" + temp + ")");
+//            }
+//            catch (Exception e){
+//                theDir = new File(parentDir + "/Results--" + dtemp.getName() + "--" + testOpt + "(" + temp + ")");
+//            }
+//            while(theDir.exists()) {
+//                temp++;
+//                try {
+//                    theDir = new File(parentDir + "/Results--" + dtemp.getName().substring(dtemp.getName().lastIndexOf("\\") + 1) + "--" + testOpt + "(" + temp + ")");
+//                }
+//                catch (Exception e){
+//                    theDir = new File(parentDir + "/Results--" + dtemp.getName() + "--" + testOpt + "(" + temp + ")");
+//                }
+//            }
+//
+//            theDir.mkdir();
+//        }
+        return theDir;
+    }
+
+    private static File createSummaryFile(String parentDir) {
+        //create summary file (CSV)
+        File file = new File(parentDir + "/results_summary.txt");
+        PrintWriter p;
+        try {
+            p = new PrintWriter(file);
+            p.write("Key_Dataset, Key_Scheme, Key_Scheme_options, accuracy(% correct)\r\n");
+            p.close();
+        } catch (FileNotFoundException e1) {
+            System.err.println("FATAL ERROR OCCURRED: Could not create summary file");
+            System.exit(1);
+        }
+        return file;
+    }
+
+    private static String createResultsDir() {
+        //Set up parent results directory
+        String parentDir = "Results";
+        File theDir = new File(parentDir);
+
+        //If the directory doesnt exist, create it
+        if(!theDir.exists()) {
+            theDir.mkdir();
+        }
+        else { //Directory already exists- create new one with number.
+            int temp = 1;
+            parentDir = "Results" + "(" + temp + ")";
+            theDir = new File(parentDir);
+
+            //Keep trying to create directory with new number until successful
+            while(theDir.exists()) {
+                temp++;
+                parentDir = "Results" + "(" + temp + ")";
+                theDir = new File(parentDir);
+            }
+
+            theDir.mkdir();
+        }
+        return parentDir;
+    }
 
 }
