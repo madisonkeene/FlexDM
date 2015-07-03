@@ -1,3 +1,6 @@
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.io.*;
@@ -223,7 +226,16 @@ public class FlexDMThread extends Thread{
 				}
 				
 				//write percent correct, classifier name, dataset name to summary file
-				p.write(dataset.getName() + ", " + classifier.getName() + ", "  + temp + ", " + eval.pctCorrect() + "\r\n");
+				p.write(dataset.getName() + ", " + classifier.getName() + ", "  + temp + ", " + eval.correct() + ", " + eval.incorrect() + ", " + eval.unclassified() + ", " +
+						eval.pctCorrect() + ", " + eval.pctIncorrect() + ", " + eval.pctUnclassified() + ", " +
+                        eval.kappa() + ", " + eval.meanAbsoluteError() + ", " + eval.rootMeanSquaredError() + ", " +
+                        eval.relativeAbsoluteError() + ", " + eval.rootRelativeSquaredError() + ", " + eval.SFPriorEntropy() + ", " +
+                        eval.SFSchemeEntropy() + ", " + eval.SFEntropyGain() + ", " + eval.SFMeanPriorEntropy() + ", " +
+                        eval.SFMeanSchemeEntropy() + ", " + eval.SFMeanEntropyGain() + ", " + eval.KBInformation() + ", " +
+                        eval.KBMeanInformation() + ", " + eval.KBRelativeInformation() + ", " + eval.weightedTruePositiveRate() + ", " +
+                        eval.weightedFalsePositiveRate() + ", " + eval.weightedTrueNegativeRate() + ", " + eval.weightedFalseNegativeRate() + ", " +
+                        eval.weightedPrecision() + ", " + eval.weightedRecall() + ", " + eval.weightedFMeasure() + ", " +
+                        eval.weightedAreaUnderROC() + "\n");
 				p.close();
 				
 				//release semaphore
@@ -252,15 +264,20 @@ public class FlexDMThread extends Thread{
 			}
 
 			try { //get a permit
-				//grab the summary file, write the classifiers details to it
+				//grab the log file, write the classifiers details to it
 				FlexDM.writeLog.acquire();
 				PrintWriter p = new PrintWriter(new FileWriter(log, true));
+
+                Date date = new Date();
+                Format formatter = new SimpleDateFormat("dd/MM/YYYY HH:mm:ss");
+                //formatter.format(date)
+
 				if(temp.equals("results_no_parameters")) { //change output based on parameters
 					temp = temp.substring(8);
 				}
 
-				//write percent correct, classifier name, dataset name to summary file
-				p.write(dataset.getName() + ", " + dataset.getTest() + ", \"" + dataset.getResult_string() + "\", " + classifier.getName() + ", "  + temp + "\n");
+				//write details to log file
+				p.write(dataset.getName() + ", " + dataset.getTest() + ", \"" + dataset.getResult_string() + "\", " + classifier.getName() + ", "  + temp + ", " + formatter.format(date) + "\n");
 				p.close();
 
 				//release semaphore

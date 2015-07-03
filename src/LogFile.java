@@ -10,19 +10,22 @@ import java.nio.file.Files;
  */
 
 public class LogFile {
-    String resultsFolder;
-    String xmlFileName;
-    ArrayList<LogEntry> entries;
+    private String resultsFolder;
+    private String xmlFileName;
+    private String initDatetime;
+    private ArrayList<LogEntry> entries;
 
     public LogFile() {
         resultsFolder = "";
         xmlFileName = "";
+        initDatetime = "";
         entries = new ArrayList<>();
     }
 
-    public LogFile(String resultsFolder, String xmlFileName) {
+    public LogFile(String resultsFolder, String xmlFileName, String initDatetime) {
         this.resultsFolder = resultsFolder;
         this.xmlFileName = xmlFileName;
+        this.initDatetime = initDatetime;
         entries = new ArrayList<>();
     }
 
@@ -42,6 +45,14 @@ public class LogFile {
         this.xmlFileName = xmlFileName;
     }
 
+    public String getInitDatetime() {
+        return initDatetime;
+    }
+
+    public void setInitDatetime(String initDatetime) {
+        this.initDatetime = initDatetime;
+    }
+
     public ArrayList<LogEntry> getEntries() {
         return entries;
     }
@@ -51,10 +62,11 @@ public class LogFile {
             String line = null;
             xmlFileName = line = reader.readLine();
             resultsFolder = line = reader.readLine();
+            initDatetime = line = reader.readLine();
             while ((line = reader.readLine()) != null) {
                 String[] splitted = line.split(", ");
-                if (splitted.length == 5) {
-                    entries.add(new LogEntry(splitted[0], splitted[1], splitted[2].replaceAll("\"", ""), splitted[3], splitted[4]));
+                if (splitted.length == 6) {
+                    entries.add(new LogEntry(splitted[0], splitted[1], splitted[2].replaceAll("\"", ""), splitted[3], splitted[4], splitted[5]));
                 }
             }
         } catch (IOException x) {

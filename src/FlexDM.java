@@ -1,5 +1,8 @@
 import java.io.*;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.concurrent.Semaphore;
@@ -92,7 +95,14 @@ public class FlexDM {
             logFile_obj.processFile(logFile);
 
             Scanner in = new Scanner(System.in);
-            System.out.println("Previous experiment found: XML file: " + logFile_obj.getXmlFileName() + " Results folder: " + logFile_obj.getResultsFolder());
+            if (logFile_obj.getEntries().size() != 0) {
+                int len = logFile_obj.getEntries().size();
+                System.out.println("Previous experiment found: Last run: " + logFile_obj.getEntries().get(len-1).getDatetime());
+            }
+            else {
+                System.out.println("Previous experiment found: Last run: " + logFile_obj.getInitDatetime());
+            }
+            System.out.println("XML file: " + logFile_obj.getXmlFileName() + " Results folder: " + logFile_obj.getResultsFolder());
             System.out.println("Would you like to continue previous experiment? (enter y to continue, any key otherwise): ");
             String s = in.nextLine();
             if (s.trim().equalsIgnoreCase("y")) {
@@ -100,6 +110,7 @@ public class FlexDM {
             }
             else {
                 logFile_obj = null;
+                deleteFile(LOG_NAME);
             }
         }
         if(!fileExists || !cont){
@@ -125,7 +136,12 @@ public class FlexDM {
 	 */
 	private static void runExperiments(LinkedList<Dataset> dlist, int numcores, File logFile, LogFile logFile_obj) {
 		int countNum = 1;
-		
+
+        // Instantiate a Date object
+        Date date = new Date();
+        Format formatter = new SimpleDateFormat("dd/MM/YYYY HH:mm:ss");
+        //formatter.format(date)
+
 		//Semaphore to control number of active experiments
 		Semaphore s = new Semaphore(Math.min(numcores, Runtime.getRuntime().availableProcessors() - 1));
         String parentDir;
@@ -136,6 +152,7 @@ public class FlexDM {
             try {
                 PrintWriter p = new PrintWriter(new FileWriter(logFile, true));
                 p.write(parentDir + "\n");
+                p.write(formatter.format(date) + "\n");
                 p.close();
             } catch (IOException e) {
                 System.err.println("FATAL ERROR OCCURRED: Could not write to log file");
@@ -352,11 +369,18 @@ public class FlexDM {
 
     private static File createSummaryFile(String parentDir) {
         //create summary file (CSV)
-        File file = new File(parentDir + "/results_summary.txt");
+        File file = new File(parentDir + "/results_summary.csv");
         PrintWriter p;
         try {
             p = new PrintWriter(file);
-            p.write("Key_Dataset, Key_Scheme, Key_Scheme_options, accuracy(% correct)\r\n");
+            p.write("Key_Dataset, Key_Scheme, Key_Scheme_options, Number_correct, " +
+                    "Number_incorrect, Number_unclassified, Percent_correct, Percent_incorrect, " +
+                    "Percent_unclassified, Kappa_statistic, Mean_absolute_error, Root_mean_squared_error, " +
+                    "Relative_absolute_error, Root_relative_squared_error, SF_prior_entropy, SF_scheme_entropy, " +
+                    "SF_entropy_gain, SF_mean_prior_entropy, SF_mean_scheme_entropy, SF_mean_entropy_gain, " +
+                    "KB_information, KB_mean_information, KB_relative_information, Weighted_avg_true_positive_rate, " +
+                    "Weighted_avg_false_positive_rate, Weighted_avg_true_negative_rate, Weighted_avg_false_negative_rate, " +
+                    "Weighted_avg_IR_precision, Weighted_avg_IR_recall, Weighted_avg_F_measure, Weighted_avg_area_under_ROC\n");
             p.close();
         } catch (FileNotFoundException e1) {
             System.err.println("FATAL ERROR OCCURRED: Could not create summary file");

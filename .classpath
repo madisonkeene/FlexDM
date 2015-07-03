@@ -2,6 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="C:/Users/Madison/Documents/FlexDM/FlexDM_lib/weka.jar"/>
+	<classpathentry exported="true" kind="lib" path="FlexDM_lib/weka.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

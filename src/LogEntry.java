@@ -7,13 +7,15 @@ public class LogEntry {
     private String resultopt;
     private String classifier;
     private String parameters;
+    private String datetime;
 
-    public LogEntry(String dataset, String testopt, String resultopt, String classifier, String parameters) {
+    public LogEntry(String dataset, String testopt, String resultopt, String classifier, String parameters, String datetime) {
         this.dataset = dataset;
         this.testopt = testopt;
         this.resultopt = resultopt;
         this.classifier = classifier;
         this.parameters = parameters;
+        this.datetime = datetime;
     }
 
     public String getDataset() {
@@ -54,5 +56,13 @@ public class LogEntry {
 
     public void setParameters(String parameters) {
         this.parameters = parameters;
+    }
+
+    public String getDatetime() {
+        return datetime;
+    }
+
+    public void setDatetime(String datetime) {
+        this.datetime = datetime;
     }
 }
