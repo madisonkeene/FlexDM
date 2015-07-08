@@ -42,6 +42,7 @@ public class FlexDM {
 
 	public static void main(String args[]) {
 		int numcores = Runtime.getRuntime().availableProcessors() - 1;
+        String customResults = "Results";
 		//Check that weka.jar is linked to project properly
 		try {
 			Class.forName("weka.core.Instances");
@@ -68,8 +69,31 @@ public class FlexDM {
 		}
 		else if(args.length == 2) {
 			myData = p.parseDocument(args[0]);
-			numcores = Integer.parseInt(args[1]);
+            try {
+                numcores = Integer.parseInt(args[1]);
+            }
+            catch(NumberFormatException e) {
+                customResults = args[1];
+            }
 		}
+        else if (args.length == 3) {
+            myData = p.parseDocument(args[0]);
+            try {
+                numcores = Integer.parseInt(args[1]);
+                customResults = args[2];
+            }
+            catch(NumberFormatException e) {
+                try {
+                    numcores = Integer.parseInt(args[2]);
+                    customResults = args[1];
+                }
+                catch(NumberFormatException e1) {
+                    System.err.println("Invalid command line arguments.");
+                    System.exit(1);
+                }
+            }
+
+        }
 		else { //XML file not specified
 			System.err.println("The XML file has not been specified.");
 			System.exit(1);
@@ -93,24 +117,30 @@ public class FlexDM {
             //if exists, load, process, open in append mode
             logFile_obj = new LogFile();
             logFile_obj.processFile(logFile);
-
-            Scanner in = new Scanner(System.in);
-            if (logFile_obj.getEntries().size() != 0) {
-                int len = logFile_obj.getEntries().size();
-                System.out.println("Previous experiment found: Last run: " + logFile_obj.getEntries().get(len-1).getDatetime());
+            File folder = new File(logFile_obj.getResultsFolder());
+            boolean folder_exists = folder.exists();
+            if(folder_exists) {
+                Scanner in = new Scanner(System.in);
+                if (logFile_obj.getEntries().size() != 0) {
+                    int len = logFile_obj.getEntries().size();
+                    System.out.println("Previous experiment found: Last run: " + logFile_obj.getEntries().get(len - 1).getDatetime());
+                } else {
+                    System.out.println("Previous experiment found: Last run: " + logFile_obj.getInitDatetime());
+                }
+                System.out.println("XML file: " + logFile_obj.getXmlFileName() + " Results folder: " + logFile_obj.getResultsFolder());
+                System.out.println("Would you like to continue previous experiment? (enter y to continue, any key otherwise): ");
+                String s = in.nextLine();
+                if (s.trim().equalsIgnoreCase("y")) {
+                    cont = true;
+                } else {
+                    logFile_obj = null;
+                    deleteFile(LOG_NAME);
+                }
             }
             else {
-                System.out.println("Previous experiment found: Last run: " + logFile_obj.getInitDatetime());
-            }
-            System.out.println("XML file: " + logFile_obj.getXmlFileName() + " Results folder: " + logFile_obj.getResultsFolder());
-            System.out.println("Would you like to continue previous experiment? (enter y to continue, any key otherwise): ");
-            String s = in.nextLine();
-            if (s.trim().equalsIgnoreCase("y")) {
-                cont = true;
-            }
-            else {
-                logFile_obj = null;
+                fileExists = false;
                 deleteFile(LOG_NAME);
+                logFile_obj = null;
             }
         }
         if(!fileExists || !cont){
@@ -127,14 +157,14 @@ public class FlexDM {
         }
 
 		//Run the experiments
-		runExperiments(myData, numcores, logFile, logFile_obj);
+		runExperiments(myData, numcores, logFile, logFile_obj, customResults);
 	}
 
 	/* Method to train/evaluate each classifier on data
 	 * Inputs: a linked list of dataset objects
 	 * Outputs: none
 	 */
-	private static void runExperiments(LinkedList<Dataset> dlist, int numcores, File logFile, LogFile logFile_obj) {
+	private static void runExperiments(LinkedList<Dataset> dlist, int numcores, File logFile, LogFile logFile_obj, String customResults) {
 		int countNum = 1;
 
         // Instantiate a Date object
@@ -147,7 +177,7 @@ public class FlexDM {
         String parentDir;
         File summaryFile;
         if(logFile_obj == null) {
-            parentDir = createResultsDir();
+            parentDir = createResultsDir(customResults);
             summaryFile = createSummaryFile(parentDir);
             try {
                 PrintWriter p = new PrintWriter(new FileWriter(logFile, true));
@@ -389,9 +419,9 @@ public class FlexDM {
         return file;
     }
 
-    private static String createResultsDir() {
+    private static String createResultsDir(String parentDir) {
         //Set up parent results directory
-        String parentDir = "Results";
+
         File theDir = new File(parentDir);
 
         //If the directory doesnt exist, create it
@@ -400,13 +430,13 @@ public class FlexDM {
         }
         else { //Directory already exists- create new one with number.
             int temp = 1;
-            parentDir = "Results" + "(" + temp + ")";
+            parentDir = parentDir + "(" + temp + ")";
             theDir = new File(parentDir);
 
             //Keep trying to create directory with new number until successful
             while(theDir.exists()) {
                 temp++;
-                parentDir = "Results" + "(" + temp + ")";
+                parentDir = parentDir + "(" + temp + ")";
                 theDir = new File(parentDir);
             }
 

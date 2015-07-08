@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ public class LogFile {
         resultsFolder = "";
         xmlFileName = "";
         initDatetime = "";
-        entries = new ArrayList<>();
+        entries = new ArrayList<LogEntry>();
     }
 
     public LogFile(String resultsFolder, String xmlFileName, String initDatetime) {
@@ -58,7 +59,7 @@ public class LogFile {
     }
 
     public void processFile(File file) {
-        try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line = null;
             xmlFileName = line = reader.readLine();
             resultsFolder = line = reader.readLine();
