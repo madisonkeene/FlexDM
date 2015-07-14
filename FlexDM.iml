@@ -17,7 +17,7 @@
     <orderEntry type="module-library" exported="">
       <library name="weka.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/FlexDM_lib/weka.jar!/" />
+          <root url="jar://$MODULE_DIR$/weka.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />

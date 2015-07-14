@@ -1,11 +1,8 @@
 <component name="ArtifactManager">
-  <artifact build-on-make="true" name="FlexDM:jar">
+  <artifact name="FlexDM:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/FlexDM_jar</output-path>
     <root id="root">
       <element id="archive" name="FlexDM.jar">
-        <element id="directory" name="META-INF">
-          <element id="file-copy" path="$PROJECT_DIR$/FlexDM_lib/META-INF/MANIFEST.MF" />
-        </element>
         <element id="module-output" name="FlexDM" />
       </element>
       <element id="library" level="module" name="weka.jar" module-name="FlexDM" />

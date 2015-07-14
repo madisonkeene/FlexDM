@@ -1,0 +1,26 @@
+CLASSIFIER: weka.classifiers.rules.PART
+ DATASET: weather.arff
+ PARAMETERS: -C 0.5 
+
+Correctly Classified Instances           4               28.5714 %
+Incorrectly Classified Instances        10               71.4286 %
+Kappa statistic                         -0.4286
+Mean absolute error                      0.6321
+Root mean squared error                  0.733 
+Relative absolute error                128.8835 %
+Root relative squared error            144.5875 %
+Total Number of Instances               14     
+
+=== Detailed Accuracy By Class ===
+
+               TP Rate   FP Rate   Precision   Recall  F-Measure   ROC Area  Class
+                 0.333     0.8        0.429     0.333     0.375      0.311    yes
+                 0.2       0.667      0.143     0.2       0.167      0.311    no
+Weighted Avg.    0.286     0.752      0.327     0.286     0.301      0.311
+
+=== Confusion Matrix ===
+
+ a b   <-- classified as
+ 3 6 | a = yes
+ 4 1 | b = no
+

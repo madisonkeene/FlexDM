@@ -41,7 +41,7 @@ public class FlexDM {
     public static final String LOG_NAME = "log.txt";
 
 	public static void main(String args[]) {
-		int numcores = Runtime.getRuntime().availableProcessors() - 1;
+		int numcores = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
         String customResults = "Results";
 		//Check that weka.jar is linked to project properly
 		try {
@@ -173,7 +173,7 @@ public class FlexDM {
         //formatter.format(date)
 
 		//Semaphore to control number of active experiments
-		Semaphore s = new Semaphore(Math.min(numcores, Runtime.getRuntime().availableProcessors() - 1));
+		Semaphore s = new Semaphore(Math.min(numcores, Math.max(1, Runtime.getRuntime().availableProcessors() - 1)));
         String parentDir;
         File summaryFile;
         if(logFile_obj == null) {
