@@ -423,26 +423,26 @@ public class FlexDM {
         //Set up parent results directory
 
         File theDir = new File(parentDir);
-
+        String parentDir_temp = parentDir;
         //If the directory doesnt exist, create it
         if(!theDir.exists()) {
             theDir.mkdir();
         }
         else { //Directory already exists- create new one with number.
             int temp = 1;
-            parentDir = parentDir + "(" + temp + ")";
-            theDir = new File(parentDir);
+            parentDir_temp = parentDir + "(" + temp + ")";
+            theDir = new File(parentDir_temp);
 
             //Keep trying to create directory with new number until successful
             while(theDir.exists()) {
                 temp++;
-                parentDir = parentDir + "(" + temp + ")";
-                theDir = new File(parentDir);
+                parentDir_temp = parentDir + "(" + temp + ")";
+                theDir = new File(parentDir_temp);
             }
 
             theDir.mkdir();
         }
-        return parentDir;
+        return parentDir_temp;
     }
 
 }
