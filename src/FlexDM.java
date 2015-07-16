@@ -298,7 +298,7 @@ public class FlexDM {
 		}
 
 		//while experiments are running, just wait.
-		while(s.availablePermits() != Math.min(numcores, Runtime.getRuntime().availableProcessors() - 1)) {}
+		while(s.availablePermits() != Math.min(numcores, Math.max(1,Runtime.getRuntime().availableProcessors() - 1))) {}
 		try {
 			Thread.sleep(100);
 		} catch (InterruptedException e) {
