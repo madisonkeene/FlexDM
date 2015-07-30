@@ -1,8 +1,0 @@
-<!DOCTYPE flexdm SYSTEM "flexdm.dtd">
-
-<flexdm>
-    <dataset name="weather.arff" test="training" results="predictions,model,matrix,stats,entropy">
-        <classifier name="weka.classifiers.trees.J48">
-        </classifier>
-    </dataset>
-</flexdm>
